@@ -20,20 +20,15 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch("/server/fetch_products/products", { mode: "cors" });
+        const response = await fetch("/server/fetch_products/products");
         if (!response.ok) {
-          throw new Error("Failed to fetch product details");
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        if (!data || !Array.isArray(data.products)) {
-          throw new Error("Unexpected product data");
-        }
-        // normalize comparison as strings
-        const found = data.products.find((p: Product) => String(p.product_id) === String(id));
-        setProduct(found || null);
-      } catch (err) {
-        console.error("Failed to load product:", err);
-        setProduct(null);
+        const productDetails = data.products.find((p: any) => String(p.product_id) === String(id));
+        setProduct(productDetails || null);
+      } catch (error) {
+        console.error("Failed to load product:", error);
       }
     };
 
