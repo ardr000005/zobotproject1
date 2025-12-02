@@ -2,38 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 
-type Product = {
-  product_id: number | string;
-  name?: string;
-  description?: string;
-  price?: number | string;
-  image_url?: string | null;
-  [k: string]: any;
-};
-
-const ProductDetail = () => {
+const ProductDetail = ({ products }: { products: any[] }) => {
   const { id } = useParams<{ id: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const response = await fetch("/server/fetch_products/products");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const productDetails = data.products.find((p: any) => String(p.product_id) === String(id));
-        setProduct(productDetails || null);
-      } catch (error) {
-        console.error("Failed to load product:", error);
-      }
-    };
-
-    fetchProduct();
-  }, [id]);
+    const productDetails = products.find((p: any) => String(p.product_id) === String(id));
+    setProduct(productDetails || null);
+  }, [id, products]);
 
   const handlePlaceOrder = async () => {
     if (!email) {
