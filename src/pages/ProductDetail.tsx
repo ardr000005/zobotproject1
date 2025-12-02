@@ -2,16 +2,36 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 
-const ProductDetail = ({ products }: { products: any[] }) => {
+const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   useEffect(() => {
-    const productDetails = products.find((p: any) => String(p.product_id) === String(id));
-    setProduct(productDetails || null);
-  }, [id, products]);
+    const fetchProducts = async () => {
+      try {
+        const response = await fetch(
+          "https://textile-907473852.development.catalystserverless.com/server/fetch_products/products"
+        ); // Reverted to direct API URL
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const productDetails = data.products.find((p: any) => String(p.product_id) === String(id));
+        setProduct(productDetails || null);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [id]);
 
   const handlePlaceOrder = async () => {
     if (!email) {
@@ -65,15 +85,9 @@ const ProductDetail = ({ products }: { products: any[] }) => {
     }
   };
 
-  if (!product) {
-    return (
-      <Layout>
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl">Loading product details...</h1>
-        </div>
-      </Layout>
-    );
-  }
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!product) return <div>Product not found</div>;
 
   const displayPrice = (() => {
     const p = Number(product.price ?? 0);
