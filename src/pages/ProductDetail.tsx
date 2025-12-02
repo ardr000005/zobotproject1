@@ -54,7 +54,7 @@ const ProductDetail = () => {
 
     try {
       const response = await fetch(
-        "https://textile-907473852.development.catalystserverless.com/server/buy_product/product_ordered",
+        "/server/buy_product/product_ordered",
         {
           method: "POST",
           mode: "cors",
