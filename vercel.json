@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/server/registration/register_check/",
+      "destination": "https://textile-907473852.development.catalystserverless.com/server/registration/register_check/"
+    },
+    {
       "source": "/server/:path*",
       "destination": "https://textile-907473852.development.catalystserverless.com/server/:path*"
     },
