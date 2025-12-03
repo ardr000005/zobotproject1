@@ -24,7 +24,7 @@ const ProductDetail = () => {
         setProduct(productDetails || null);
       } catch (err) {
         console.error("Fetch error:", err);
-        setError(err.message);
+        setError((err as any).message ?? String(err));
       } finally {
         setLoading(false);
       }
@@ -33,9 +33,21 @@ const ProductDetail = () => {
     fetchProducts();
   }, [id]);
 
+  const isValidEmail = (e: string) => {
+    const s = String(e || "").trim().toLowerCase();
+    // simple email regex — sufficient for UI-level validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  };
+
   const handlePlaceOrder = async () => {
-    if (!email) {
+    const trimmedEmail = String(email || "").trim().toLowerCase();
+
+    if (!trimmedEmail) {
       alert("Please enter your email to place the order.");
+      return;
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      alert("Please enter a valid email address.");
       return;
     }
     if (!product) {
@@ -45,40 +57,73 @@ const ProductDetail = () => {
 
     setIsPlacingOrder(true);
 
-    // build payload matching server expectation
-    const payload = {
-      product_id: Number(product.product_id),
-      total: Number(product.price ?? 0),
-      email: String(email).trim().toLowerCase(),
-    };
-
     try {
-      const response = await fetch(
-        "/server/buy_product/product_ordered",
+      // 1) Check registration
+      const regResponse = await fetch(
+        "https://textile-907473852.development.catalystserverless.com/server/registration/register_check/",
         {
           method: "POST",
           mode: "cors",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: trimmedEmail }),
         }
       );
 
-      // always read body so we can show server message
-      const text = await response.text().catch(() => null);
-      let json: any = null;
-      try { json = text ? JSON.parse(text) : null; } catch (e) { /* not json */ }
+      let regJson: any = null;
+      try {
+        regJson = await regResponse.json();
+      } catch (e) {
+        // not json or empty
+        regJson = null;
+      }
 
-      if (!response.ok) {
-        // prefer server-provided message if any
-        const msg = (json && (json.error || json.message)) || text || `Server returned ${response.status}`;
-        console.error("Order placement failed:", response.status, msg);
+      if (!regResponse.ok) {
+        const msg = (regJson && (regJson.error || regJson.message)) || `Registration check failed: ${regResponse.status}`;
+        console.error("Registration check error:", msg);
+        alert("Failed to verify registration: " + msg);
+        return;
+      }
+
+      // Expecting { status: "success", exists: true/false, message: "..." }
+      if (!regJson || regJson.exists !== true) {
+        // If exists is explicitly false or missing, alert user
+        alert("Enter Your Registered Email id");
+        return;
+      }
+
+      // 2) Proceed to place order
+      const payload = {
+        product_id: Number(product.product_id),
+        total: Number(product.price ?? 0),
+        email: trimmedEmail,
+      };
+
+      const orderResponse = await fetch("/server/buy_product/product_ordered", {
+        method: "POST",
+        mode: "cors",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      // always read body so we can show server message
+      const text = await orderResponse.text().catch(() => null);
+      let json: any = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // not json
+      }
+
+      if (!orderResponse.ok) {
+        const msg = (json && (json.error || json.message)) || text || `Server returned ${orderResponse.status}`;
+        console.error("Order placement failed:", orderResponse.status, msg);
         alert("Failed to place order: " + msg);
         return;
       }
 
-      // Success response (server returns order info)
+      // Success
       alert("Order placed successfully. Thank you!");
     } catch (err: any) {
       console.error("Order placement failed:", err);
@@ -137,4 +182,3 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
-
