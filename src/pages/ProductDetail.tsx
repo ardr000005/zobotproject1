@@ -15,7 +15,7 @@ const ProductDetail = () => {
       try {
         const response = await fetch(
           "https://textile-907473852.development.catalystserverless.com/server/fetch_products/products"
-        ); // Reverted to direct API URL
+        ); // still using direct API for products (unchanged)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -35,7 +35,6 @@ const ProductDetail = () => {
 
   const isValidEmail = (e: string) => {
     const s = String(e || "").trim().toLowerCase();
-    // simple email regex — sufficient for UI-level validation
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
   };
 
@@ -58,9 +57,9 @@ const ProductDetail = () => {
     setIsPlacingOrder(true);
 
     try {
-      // 1) Check registration
+      // ---- PROXIED registration check (relative path) ----
       const regResponse = await fetch(
-        "https://textile-907473852.development.catalystserverless.com/server/registration/register_check/",
+        "/server/registration/register_check/",
         {
           method: "POST",
           mode: "cors",
@@ -70,12 +69,7 @@ const ProductDetail = () => {
       );
 
       let regJson: any = null;
-      try {
-        regJson = await regResponse.json();
-      } catch (e) {
-        // not json or empty
-        regJson = null;
-      }
+      try { regJson = await regResponse.json(); } catch (e) { regJson = null; }
 
       if (!regResponse.ok) {
         const msg = (regJson && (regJson.error || regJson.message)) || `Registration check failed: ${regResponse.status}`;
@@ -91,7 +85,7 @@ const ProductDetail = () => {
         return;
       }
 
-      // 2) Proceed to place order
+      // ---- Proceed to place order (you already proxy this route in your existing setup) ----
       const payload = {
         product_id: Number(product.product_id),
         total: Number(product.price ?? 0),
@@ -101,20 +95,13 @@ const ProductDetail = () => {
       const orderResponse = await fetch("/server/buy_product/product_ordered", {
         method: "POST",
         mode: "cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      // always read body so we can show server message
       const text = await orderResponse.text().catch(() => null);
       let json: any = null;
-      try {
-        json = text ? JSON.parse(text) : null;
-      } catch (e) {
-        // not json
-      }
+      try { json = text ? JSON.parse(text) : null; } catch (e) { /* not json */ }
 
       if (!orderResponse.ok) {
         const msg = (json && (json.error || json.message)) || text || `Server returned ${orderResponse.status}`;
@@ -123,7 +110,6 @@ const ProductDetail = () => {
         return;
       }
 
-      // Success
       alert("Order placed successfully. Thank you!");
     } catch (err: any) {
       console.error("Order placement failed:", err);
